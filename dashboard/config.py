@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 # Operator: set to your public GitHub repo URL before deploying.
-GITHUB_REPO_URL = "https://github.com/your-username/patrick_boyle_scraper"
+GITHUB_REPO_URL = "https://github.com/huyptruong/patrick_boyle_scraper"
 
 PATRICK_BOYLE_CHANNEL_URL = "https://www.youtube.com/@pboyle"
 PATRICK_BOYLE_CHANNEL_NAME = "Patrick Boyle"
