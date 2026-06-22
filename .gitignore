@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.cursor/
+.env
+
+# Personal data (do not commit calibrations or scraped output)
+data/click_positions.json
+data/summaries.csv
+data/videos.csv
+data/run.log
+data/videos_with_summaries.csv
+data/failed_ids.txt

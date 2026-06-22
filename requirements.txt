@@ -1,0 +1,4 @@
+yt-dlp==2026.6.9
+pyautogui==0.9.54
+pyperclip==1.9.0
+pytest==8.4.1
