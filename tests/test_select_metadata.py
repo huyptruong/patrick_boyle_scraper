@@ -1,4 +1,4 @@
-"""Tests for extract_summaries video selection."""
+"""Tests for extract_plan video selection."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from extract_summaries import _select_metadata_rows
+from scraper.extract_plan import count_videos_to_extract, select_metadata_rows
 
 
 def _metadata() -> list[dict[str, str]]:
@@ -18,7 +18,7 @@ def _metadata() -> list[dict[str, str]]:
 
 
 def test_select_metadata_rows_by_video_ids() -> None:
-    rows = _select_metadata_rows(
+    rows = select_metadata_rows(
         _metadata(),
         video_ids=["third", "first"],
         max_videos=None,
@@ -29,7 +29,7 @@ def test_select_metadata_rows_by_video_ids() -> None:
 
 
 def test_select_metadata_rows_by_max_videos() -> None:
-    rows = _select_metadata_rows(
+    rows = select_metadata_rows(
         _metadata(),
         video_ids=[],
         max_videos=2,
@@ -40,7 +40,7 @@ def test_select_metadata_rows_by_max_videos() -> None:
 
 
 def test_select_metadata_rows_returns_all_when_no_filters() -> None:
-    rows = _select_metadata_rows(
+    rows = select_metadata_rows(
         _metadata(),
         video_ids=[],
         max_videos=None,
@@ -52,7 +52,7 @@ def test_select_metadata_rows_returns_all_when_no_filters() -> None:
 
 def test_select_metadata_rows_missing_id_raises() -> None:
     with pytest.raises(ValueError, match="not found"):
-        _select_metadata_rows(
+        select_metadata_rows(
             _metadata(),
             video_ids=["missing"],
             max_videos=None,
@@ -61,17 +61,15 @@ def test_select_metadata_rows_missing_id_raises() -> None:
 
 
 def test_count_videos_to_extract_respects_skip_existing() -> None:
-    from extract_summaries import _count_videos_to_extract
-
     metadata = _metadata()
     summaries = {"first": "already done"}
-    assert _count_videos_to_extract(
+    assert count_videos_to_extract(
         metadata,
         summaries,
         skip_existing=True,
         explicit_video_ids=False,
     ) == 2
-    assert _count_videos_to_extract(
+    assert count_videos_to_extract(
         metadata,
         summaries,
         skip_existing=False,

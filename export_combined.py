@@ -5,8 +5,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from config import VIDEOS_CSV, VIDEOS_WITH_SUMMARIES_CSV, SUMMARIES_CSV
-from csv_io import merge_videos_and_summaries, write_combined_csv
+from scraper.config import SUMMARIES_CSV, VIDEOS_CSV, VIDEOS_WITH_SUMMARIES_CSV
+from scraper.csv_io import merge_videos_and_summaries, write_combined_csv
 
 
 def main() -> None:

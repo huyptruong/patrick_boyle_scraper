@@ -51,7 +51,7 @@ Terminal shows steps 1–10 per video, then `Saved summary (N chars)`. Progress 
 
 Walk through one sample Patrick Boyle video and save where to click on your screen.
 
-Sample video (steps 2–6): `https://www.youtube.com/watch?v=wKXgeNwNRJ4` (same URL as `SAMPLE_CALIBRATION_VIDEO` in `config.py`)
+Sample video (steps 2–6): `https://www.youtube.com/watch?v=wKXgeNwNRJ4` (same URL as `SAMPLE_CALIBRATION_VIDEO` in `scraper/config.py`)
 
 ```bash
 python calibrate.py
@@ -69,7 +69,7 @@ Click positions live in `data/click_positions.json` (machine-specific; gitignore
 ## Troubleshooting
 
 **Empty clipboard / “Copy returned empty text”**
-Increase `after_summarize` or `after_copy` in `EXTRACT_WAITS` at the top of `extract_summaries.py`, or run with `--slow`.
+Increase `after_summarize` or `after_copy` in `EXTRACT_WAITS` at the top of `scraper/brave_extract.py`, or run with `--slow`.
 
 **Extract stops mid-run**
 Do not move the mouse to the screen corner during a run — pyautogui treats that as an emergency stop (failsafe).
@@ -83,17 +83,48 @@ Grant Accessibility permission to Terminal or Cursor in System Settings → Priv
 **Some videos keep failing**
 Check `data/run.log` for timestamps and errors. Failed ids are saved to `data/failed_ids.txt` — retry with `python extract_summaries.py --retry-failed`.
 
+## Project layout
+
+**What you run** (repo root — start here):
+
+| Script | What it does |
+|--------|----------------|
+| `scrape_metadata.py` | Pull YouTube metadata → `data/videos.csv` |
+| `calibrate.py` | One-time click calibration (once per machine/monitor) |
+| `extract_summaries.py` | Batch extract summaries → `data/summaries.csv` |
+| `export_combined.py` | Join videos + summaries → `data/videos_with_summaries.csv` |
+
+**Engine room** (`scraper/` — open only when debugging):
+
+| File | What it does |
+|------|----------------|
+| `scraper/brave_extract.py` | Brave clicks for one video; tune `EXTRACT_WAITS` here |
+| `scraper/extract_plan.py` | Which videos to extract (`--skip-existing`, filters) |
+| `scraper/config.py` | Paths, CSV columns, platform checks |
+| `scraper/csv_io.py` | Read/write CSV files |
+| `scraper/run_log.py` | Append-only log → `data/run.log` |
+
+```
+YOU RUN:     scrape_metadata → calibrate → extract_summaries → export_combined
+
+EXTRACT:     extract_summaries.py  →  loop over videos
+                 ├── scraper/extract_plan.py   which videos?
+                 └── scraper/brave_extract.py  click Brave once
+```
+
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `config.py` | Paths, CSV columns, platform checks, click-position validation |
+| `scraper/config.py` | Paths, CSV columns, platform checks, click-position validation |
 | `calibrate.py` | One-time calibration wizard → `click_positions.json` |
 | `scrape_metadata.py` | Pull YouTube metadata → `videos.csv` |
-| `extract_summaries.py` | Browser UI automation → `summaries.csv` |
+| `scraper/brave_extract.py` | Brave UI automation for one video summary |
+| `scraper/extract_plan.py` | Which videos to extract (filters, skip-existing) |
+| `extract_summaries.py` | Batch extract loop → `summaries.csv` |
 | `export_combined.py` | Join videos + summaries → `videos_with_summaries.csv` |
-| `csv_io.py` | Read/write CSVs (paths and columns defined in `config.py`) |
-| `run_log.py` | Append-only extract log → `data/run.log` |
+| `scraper/csv_io.py` | Read/write CSVs (paths and columns defined in `scraper/config.py`) |
+| `scraper/run_log.py` | Append-only extract log → `data/run.log` |
 
 ## Tests
 
@@ -101,4 +132,4 @@ Check `data/run.log` for timestamps and errors. Failed ids are saved to `data/fa
 pytest -v
 ```
 
-Tune wait times in `EXTRACT_WAITS` at the top of `extract_summaries.py`, or run with `--slow` / `--wait-multiplier 2`.
+Tune wait times in `EXTRACT_WAITS` at the top of `scraper/brave_extract.py`, or run with `--slow` / `--wait-multiplier 2`.

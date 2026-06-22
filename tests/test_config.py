@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from config import (
+from scraper.config import (
     DATA_DIR,
     FAILED_IDS_PATH,
     PROJECT_ROOT,

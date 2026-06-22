@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-import config
-from config import CLICK_POSITION_KEYS, click_calibration_is_complete, is_valid_click_position, load_click_positions
+import scraper.config as config
+from scraper.config import CLICK_POSITION_KEYS, click_calibration_is_complete, is_valid_click_position, load_click_positions
 
 
 def _valid_positions() -> dict[str, list[int]]:

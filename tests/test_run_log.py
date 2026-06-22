@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from run_log import log_extract_result
+from scraper.run_log import log_extract_result
 
 
 def test_log_extract_result_appends_to_file(tmp_path: Path, monkeypatch) -> None:
-    import config
-    import run_log
+    import scraper.config as config
+    import scraper.run_log as run_log
 
     log_path = tmp_path / "run.log"
     monkeypatch.setattr(config, "RUN_LOG_PATH", log_path)

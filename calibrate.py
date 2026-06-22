@@ -9,7 +9,7 @@ import argparse
 import json
 from typing import TYPE_CHECKING, Any
 
-from config import (
+from scraper.config import (
     CLICK_POSITION_KEYS,
     CLICK_POSITIONS_PATH,
     SAMPLE_CALIBRATION_VIDEO,

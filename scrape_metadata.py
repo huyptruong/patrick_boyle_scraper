@@ -8,8 +8,8 @@ from pathlib import Path
 from yt_dlp import YoutubeDL
 from yt_dlp.utils import DownloadError
 
-from csv_io import write_metadata
-from config import VIDEO_FIELDS, VIDEOS_CSV
+from scraper.config import VIDEO_FIELDS, VIDEOS_CSV
+from scraper.csv_io import write_metadata
 
 
 # ---------------------------------------------------------------------------

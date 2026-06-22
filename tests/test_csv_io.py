@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from csv_io import (
+from scraper.csv_io import (
     _atomic_write_csv,
     clear_failed_id,
     merge_videos_and_summaries,
@@ -18,7 +18,7 @@ from csv_io import (
     write_metadata,
     write_summaries,
 )
-from config import SUMMARY_FIELDS, VIDEO_FIELDS
+from scraper.config import SUMMARY_FIELDS, VIDEO_FIELDS
 
 
 def _video_row(video_id: str, title: str = "") -> dict[str, str]:
