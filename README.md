@@ -6,6 +6,16 @@
 
 **Platform:** macOS or Windows for browser UI extraction. Metadata scraper works anywhere.
 
+## How I built this
+
+Portfolio project developed with **Cursor** agents and a structured workflow:
+
+1. **Design** — Requirements sharpened in conversation; decisions captured in [`CONTEXT.md`](CONTEXT.md) and [`docs/adr/`](docs/adr/).
+2. **Plan** — PRD split into small, independent issues (scraper → publish pipeline → Streamlit dashboard).
+3. **Ship** — Local Brave extract → `publish/` snapshot → public dashboard on Streamlit Cloud.
+
+Agent conventions for this repo: [`AGENTS.md`](AGENTS.md).
+
 ## Setup
 
 ```bash
@@ -38,6 +48,35 @@ python publish_data.py          # dashboard snapshot → publish/
 ```
 
 `export_combined.py` still writes a local join to `data/videos_with_summaries.csv` (gitignored). The public dashboard reads `publish/` only.
+
+### Study slice (one month at a time)
+
+Process a single calendar month (`YYYY-MM`). Re-running the same slice asks whether to refresh; a new slice appends without touching other months.
+
+```bash
+# This week — June 2026
+python scrape_metadata.py --slice 2026-06
+python extract_summaries.py --slice 2026-06
+
+# Preview before Brave opens
+python scrape_metadata.py --slice 2026-06 --dry-run
+python extract_summaries.py --slice 2026-06 --dry-run
+
+# Fill gaps without re-extracting the whole month
+python extract_summaries.py --slice 2026-06 --skip-existing
+```
+
+Open `data/summaries.csv`, check what's missing, hand-fill if needed, then move on (e.g. `--slice 2026-05` for backfill).
+
+Other useful commands:
+
+```bash
+python extract_summaries.py --retry-failed    # re-run ids in data/failed_ids.txt
+python extract_summaries.py --dry-run         # preview without opening Brave
+python scrape_metadata.py --merge             # refresh metadata without wiping old rows
+```
+
+Terminal shows steps 1–10 per video, then `Saved summary (N chars)`. Progress estimates appear during batch runs.
 
 ## Dashboard
 
@@ -84,35 +123,6 @@ Brave extract runs **locally only**. Streamlit Cloud serves the last committed `
 5. Deploy. Each push to the default branch redeploys automatically.
 
 **Attribution:** Summaries are AI-generated from Patrick Boyle’s public YouTube videos. This project is not affiliated with Patrick Boyle.
-
-### Study slice (one month at a time)
-
-Process a single calendar month (`YYYY-MM`). Re-running the same slice asks whether to refresh; a new slice appends without touching other months.
-
-```bash
-# This week — June 2026
-python scrape_metadata.py --slice 2026-06
-python extract_summaries.py --slice 2026-06
-
-# Preview before Brave opens
-python scrape_metadata.py --slice 2026-06 --dry-run
-python extract_summaries.py --slice 2026-06 --dry-run
-
-# Fill gaps without re-extracting the whole month
-python extract_summaries.py --slice 2026-06 --skip-existing
-```
-
-Open `data/summaries.csv`, check what's missing, hand-fill if needed, then move on (e.g. `--slice 2026-05` for backfill).
-
-Other useful commands:
-
-```bash
-python extract_summaries.py --retry-failed    # re-run ids in data/failed_ids.txt
-python extract_summaries.py --dry-run         # preview without opening Brave
-python scrape_metadata.py --merge             # refresh metadata without wiping old rows
-```
-
-Terminal shows steps 1–10 per video, then `Saved summary (N chars)`. Progress estimates appear during batch runs.
 
 ## Calibrate once (maximized Brave on your screen)
 
