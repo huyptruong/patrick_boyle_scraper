@@ -29,8 +29,6 @@ EXTRACT_WAITS = {
     "after_navigate": 5,
     "after_ask": 5,
     "after_summarize": 10,
-    "copy_scroll_count": 4,
-    "after_copy_scroll": 0.25,
     "after_copy": 1.5,
     "copy_retry_wait": 3,
     "quit_brave": 2,
@@ -159,14 +157,9 @@ def extract_one_summary(
         actions["click"](*click_positions["summary_box_click"])
         actions["wait"]("after_click")
 
-        scroll_count = int(EXTRACT_WAITS["copy_scroll_count"])
-        print(
-            f"  8. Scrolling to bottom ({modifier}+Down x{scroll_count})...",
-            flush=True,
-        )
-        for _ in range(scroll_count):
-            actions["hotkey"](modifier, "down")
-            actions["wait"]("after_copy_scroll")
+        print(f"  8. Scrolling in summary box ({modifier}+Down)...", flush=True)
+        actions["hotkey"](modifier, "down")
+        actions["wait"]("after_click")
 
         print("  9. Clicking Copy...", flush=True)
         return _copy_summary_text(click_positions, actions)

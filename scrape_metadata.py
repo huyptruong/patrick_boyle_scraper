@@ -9,7 +9,14 @@ from yt_dlp import YoutubeDL
 from yt_dlp.utils import DownloadError
 
 from scraper.config import VIDEO_FIELDS, VIDEOS_CSV
-from scraper.csv_io import write_metadata
+from scraper.csv_io import read_metadata_if_exists, write_metadata, write_metadata_for_slice
+from scraper.slice import (
+    confirm_slice_refresh,
+    count_metadata_in_slice,
+    parse_slice,
+    should_stop_channel_scan,
+    upload_date_in_slice,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -90,6 +97,53 @@ def scrape_metadata(
     return rows, total, skipped_count
 
 
+def scrape_metadata_for_slice(
+    channel_url: str,
+    yyyymm_prefix: str,
+    *,
+    stop_on_error: bool = False,
+) -> tuple[list[dict], int, int]:
+    """List the channel (newest first), fetch metadata, keep only the slice month."""
+    video_entries = list_channel_videos(channel_url, max_videos=None)
+    total = len(video_entries)
+    skipped_count = 0
+
+    print(f"  2. Fetching metadata for slice {yyyymm_prefix[:4]}-{yyyymm_prefix[4:]}...", flush=True)
+    ydl_opts = {"quiet": True, "no_warnings": True, "skip_download": True}
+    rows: list[dict] = []
+    with YoutubeDL(ydl_opts) as ydl:
+        for index, entry in enumerate(video_entries, start=1):
+            video_id = entry["id"]
+            url = entry.get("url") or f"https://www.youtube.com/watch?v={video_id}"
+            title = entry.get("title") or url
+            print(f"    [{index}/{total}] {title}", flush=True)
+            try:
+                info = ydl.extract_info(url, download=False)
+            except DownloadError as exc:
+                if stop_on_error:
+                    raise RuntimeError(
+                        f"Could not fetch video metadata for {video_id}. "
+                        "Check URL and network."
+                    ) from exc
+                print(f"    Skipped {video_id}: {exc}", flush=True)
+                skipped_count += 1
+                continue
+
+            upload_date = info.get("upload_date")
+            if should_stop_channel_scan(upload_date, yyyymm_prefix):
+                print(
+                    f"  Reached videos older than slice month — stopping channel scan.",
+                    flush=True,
+                )
+                break
+            if not upload_date_in_slice(upload_date, yyyymm_prefix):
+                continue
+
+            rows.append({field: info.get(field) for field in VIDEO_FIELDS})
+
+    return rows, total, skipped_count
+
+
 # ---------------------------------------------------------------------------
 # Run scraper
 # ---------------------------------------------------------------------------
@@ -116,6 +170,12 @@ def main() -> None:
 
         python scrape_metadata.py --channel URL --output path.csv
             Different channel or output file
+
+        python scrape_metadata.py --slice 2026-06
+            Fetch metadata for June 2026 only; merge into videos.csv
+
+        python scrape_metadata.py --slice 2026-06 --dry-run
+            Show which videos would be kept for the slice
     """
     parser = argparse.ArgumentParser(
         description="Scrape YouTube channel metadata into data/videos.csv",
@@ -152,12 +212,59 @@ def main() -> None:
         action="store_true",
         help="Stop on the first failed video (default: skip and continue)",
     )
+    parser.add_argument(
+        "--slice",
+        metavar="YYYY-MM",
+        default=None,
+        help="Only videos uploaded in this month (e.g. 2026-06)",
+    )
     args = parser.parse_args()
 
     if args.max_videos is not None and args.max_videos <= 0:
         raise ValueError("--max-videos must be a positive integer")
 
+    if args.slice and args.max_videos is not None:
+        raise ValueError("Use --slice or --max-videos, not both")
+
+    if args.slice and args.merge:
+        raise ValueError("--slice already merges into videos.csv; do not pass --merge")
+
+    slice_label: str | None = None
+    yyyymm_prefix: str | None = None
+    if args.slice:
+        slice_label, yyyymm_prefix = parse_slice(args.slice)
+
+    refresh_slice = False
+    if slice_label and yyyymm_prefix:
+        existing = read_metadata_if_exists(args.output)
+        existing_count = count_metadata_in_slice(existing, yyyymm_prefix)
+        if existing_count > 0 and not args.dry_run:
+            refresh_slice = confirm_slice_refresh(
+                "metadata row(s)",
+                slice_label,
+                existing_count,
+            )
+            if not refresh_slice:
+                print(f"Keeping existing metadata for {slice_label}.", flush=True)
+                return
+
     if args.dry_run:
+        if slice_label and yyyymm_prefix:
+            rows, total, skipped = scrape_metadata_for_slice(
+                args.channel,
+                yyyymm_prefix,
+                stop_on_error=args.stop_on_error,
+            )
+            print(
+                f"Dry run — would write {len(rows)} video(s) for {slice_label} "
+                f"(scanned {total}, skipped {skipped}).",
+                flush=True,
+            )
+            for index, row in enumerate(rows, start=1):
+                title = row.get("title") or row["id"]
+                print(f"  [{index}/{len(rows)}] {title} ({row['id']})", flush=True)
+            return
+
         video_entries = list_channel_videos(args.channel, args.max_videos)
         print("Dry run — no metadata will be fetched or written.", flush=True)
         for index, entry in enumerate(video_entries, start=1):
@@ -166,6 +273,27 @@ def main() -> None:
             print(f"  [{index}/{len(video_entries)}] {title} ({video_id})", flush=True)
         merge_note = " (merge mode)" if args.merge else ""
         print(f"Would scrape {len(video_entries)} videos to {args.output}{merge_note}", flush=True)
+        return
+
+    if slice_label and yyyymm_prefix:
+        rows, total, skipped_count = scrape_metadata_for_slice(
+            args.channel,
+            yyyymm_prefix,
+            stop_on_error=args.stop_on_error,
+        )
+        written_count = write_metadata_for_slice(
+            rows,
+            yyyymm_prefix,
+            args.output,
+            refresh=refresh_slice,
+        )
+        action = "Refreshed" if refresh_slice else "Added"
+        print(
+            f"{action} {len(rows)} video(s) for {slice_label} "
+            f"(scanned {total}, skipped {skipped_count}). "
+            f"{written_count} metadata rows in {args.output}",
+            flush=True,
+        )
         return
 
     rows, total, skipped_count = scrape_metadata(

@@ -11,9 +11,9 @@ from scraper.extract_plan import count_videos_to_extract, select_metadata_rows
 
 def _metadata() -> list[dict[str, str]]:
     return [
-        {"id": "first", "title": "First"},
-        {"id": "second", "title": "Second"},
-        {"id": "third", "title": "Third"},
+        {"id": "first", "title": "First", "upload_date": "20260601"},
+        {"id": "second", "title": "Second", "upload_date": "20260615"},
+        {"id": "third", "title": "Third", "upload_date": "20260501"},
     ]
 
 
@@ -23,6 +23,7 @@ def test_select_metadata_rows_by_video_ids() -> None:
         video_ids=["third", "first"],
         max_videos=None,
         input_path=Path("videos.csv"),
+        slice_yyyymm=None,
     )
 
     assert [row["id"] for row in rows] == ["third", "first"]
@@ -75,3 +76,15 @@ def test_count_videos_to_extract_respects_skip_existing() -> None:
         skip_existing=False,
         explicit_video_ids=False,
     ) == 3
+
+
+def test_select_metadata_rows_filters_by_slice() -> None:
+    rows = select_metadata_rows(
+        _metadata(),
+        video_ids=[],
+        max_videos=None,
+        input_path=Path("videos.csv"),
+        slice_yyyymm="202606",
+    )
+
+    assert [row["id"] for row in rows] == ["first", "second"]

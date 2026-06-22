@@ -11,8 +11,14 @@ def select_metadata_rows(
     video_ids: list[str],
     max_videos: int | None,
     input_path: Path,
+    slice_yyyymm: str | None = None,
 ) -> list[dict[str, str]]:
     """Pick which videos to process from CLI args."""
+    if slice_yyyymm:
+        from scraper.slice import filter_metadata_by_slice
+
+        all_metadata = filter_metadata_by_slice(all_metadata, slice_yyyymm)
+
     if video_ids:
         by_id = {row["id"]: row for row in all_metadata}
         missing = [video_id for video_id in video_ids if video_id not in by_id]

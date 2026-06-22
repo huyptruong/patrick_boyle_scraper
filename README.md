@@ -37,6 +37,25 @@ python extract_summaries.py --skip-existing
 python export_combined.py
 ```
 
+### Study slice (one month at a time)
+
+Process a single calendar month (`YYYY-MM`). Re-running the same slice asks whether to refresh; a new slice appends without touching other months.
+
+```bash
+# This week — June 2026
+python scrape_metadata.py --slice 2026-06
+python extract_summaries.py --slice 2026-06
+
+# Preview before Brave opens
+python scrape_metadata.py --slice 2026-06 --dry-run
+python extract_summaries.py --slice 2026-06 --dry-run
+
+# Fill gaps without re-extracting the whole month
+python extract_summaries.py --slice 2026-06 --skip-existing
+```
+
+Open `data/summaries.csv`, check what's missing, hand-fill if needed, then move on (e.g. `--slice 2026-05` for backfill).
+
 Other useful commands:
 
 ```bash
@@ -99,6 +118,7 @@ Check `data/run.log` for timestamps and errors. Failed ids are saved to `data/fa
 | File | What it does |
 |------|----------------|
 | `scraper/brave_extract.py` | Brave clicks for one video; tune `EXTRACT_WAITS` here |
+| `scraper/slice.py` | Parse `--slice YYYY-MM`, filter by `upload_date`, merge/replace rules |
 | `scraper/extract_plan.py` | Which videos to extract (`--skip-existing`, filters) |
 | `scraper/config.py` | Paths, CSV columns, platform checks |
 | `scraper/csv_io.py` | Read/write CSV files |

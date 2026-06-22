@@ -14,10 +14,18 @@ from scraper.csv_io import (
     read_metadata,
     read_summaries,
     record_failed_id,
+    remove_summaries_for_video_ids,
     write_summaries,
 )
 from scraper.extract_plan import count_videos_to_extract, select_metadata_rows
 from scraper.run_log import log_extract_result
+from scraper.slice import (
+    confirm_slice_refresh,
+    exit_missing_slice_metadata,
+    filter_metadata_by_slice,
+    parse_slice,
+    slice_summaries_exist,
+)
 
 
 def _format_duration(seconds: float) -> str:
@@ -54,6 +62,12 @@ def main() -> None:
 
         python extract_summaries.py --retry-failed
             Re-run video ids listed in data/failed_ids.txt
+
+        python extract_summaries.py --slice 2026-06
+            Extract summaries for videos uploaded in June 2026
+
+        python extract_summaries.py --slice 2026-06 --skip-existing
+            Same slice, but skip videos that already have a summary
     """
     parser = argparse.ArgumentParser(
         description="Extract summaries via browser UI automation (Brave Ask)."
@@ -94,13 +108,33 @@ def main() -> None:
         action="store_true",
         help="Re-run video ids listed in data/failed_ids.txt",
     )
+    parser.add_argument(
+        "--slice",
+        metavar="YYYY-MM",
+        default=None,
+        help="Only videos uploaded in this month (e.g. 2026-06)",
+    )
     args = parser.parse_args()
 
     if args.retry_failed and args.video_ids:
         raise ValueError("Use either --retry-failed or explicit VIDEO_ID args, not both")
 
+    if args.slice and args.video_ids:
+        raise ValueError("Use --slice or explicit VIDEO_ID args, not both")
+
+    if args.slice and args.retry_failed:
+        raise ValueError("Use --slice or --retry-failed, not both")
+
     if args.max_videos is not None and args.max_videos <= 0:
         raise ValueError("--max-videos must be a positive integer")
+
+    if args.slice and args.max_videos is not None:
+        raise ValueError("Use --slice or --max-videos, not both")
+
+    slice_label: str | None = None
+    yyyymm_prefix: str | None = None
+    if args.slice:
+        slice_label, yyyymm_prefix = parse_slice(args.slice)
 
     wait_multiplier = 2.0 if args.slow else args.wait_multiplier
     if wait_multiplier <= 0:
@@ -123,10 +157,50 @@ def main() -> None:
         video_ids=video_ids,
         max_videos=args.max_videos,
         input_path=args.input,
+        slice_yyyymm=yyyymm_prefix,
     )
+
+    if slice_label and yyyymm_prefix and not metadata_rows:
+        exit_missing_slice_metadata(
+            slice_label,
+            csv_path=args.input,
+            all_metadata=all_metadata,
+        )
 
     summaries = read_summaries(args.output)
     explicit_video_ids = bool(video_ids)
+    skip_existing = args.skip_existing
+
+    if slice_label and yyyymm_prefix and not args.dry_run:
+        slice_rows = filter_metadata_by_slice(all_metadata, yyyymm_prefix)
+        if slice_summaries_exist(summaries, slice_rows, yyyymm_prefix):
+            summary_count = sum(
+                1
+                for row in slice_rows
+                if summaries.get(row["id"], "").strip()
+            )
+            refresh_slice = confirm_slice_refresh(
+                "summary row(s)",
+                slice_label,
+                summary_count,
+            )
+            if not refresh_slice:
+                if skip_existing:
+                    print(
+                        f"Keeping existing summaries for {slice_label}. "
+                        "Extracting only videos still missing summaries.",
+                        flush=True,
+                    )
+                else:
+                    print(f"Keeping existing summaries for {slice_label}.", flush=True)
+                    return
+            else:
+                remove_summaries_for_video_ids(
+                    {row["id"] for row in slice_rows},
+                    args.output,
+                )
+                summaries = read_summaries(args.output)
+                skip_existing = False
 
     if args.dry_run:
         would_extract: list[tuple[str, str]] = []
@@ -135,7 +209,7 @@ def main() -> None:
             vid = row["id"]
             title = row.get("title", vid)
             if (
-                args.skip_existing
+                skip_existing
                 and not explicit_video_ids
                 and summaries.get(vid, "").strip()
             ):
@@ -163,7 +237,7 @@ def main() -> None:
     to_extract = count_videos_to_extract(
         metadata_rows,
         summaries,
-        skip_existing=args.skip_existing,
+        skip_existing=skip_existing,
         explicit_video_ids=explicit_video_ids,
     )
     completed_attempts = 0
@@ -174,7 +248,7 @@ def main() -> None:
         title = row.get("title", vid)
 
         if (
-            args.skip_existing
+            skip_existing
             and not explicit_video_ids
             and summaries.get(vid, "").strip()
         ):

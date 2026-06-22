@@ -33,6 +33,15 @@ def read_metadata(csv_path: Path = VIDEOS_CSV) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
+def read_metadata_if_exists(csv_path: Path = VIDEOS_CSV) -> list[dict[str, str]]:
+    """Read videos.csv, or return an empty list if the file is missing."""
+    if not csv_path.exists():
+        return []
+
+    with csv_path.open(encoding="utf-8", newline="") as handle:
+        return list(csv.DictReader(handle))
+
+
 def write_metadata(
     rows: list[dict],
     csv_path: Path = VIDEOS_CSV,
@@ -64,9 +73,43 @@ def write_metadata(
     return len(rows)
 
 
-# ---------------------------------------------------------------------------
-# Summaries (summaries.csv)
-# ---------------------------------------------------------------------------
+def write_metadata_for_slice(
+    new_rows: list[dict],
+    yyyymm_prefix: str,
+    csv_path: Path = VIDEOS_CSV,
+    *,
+    fieldnames: tuple[str, ...] = VIDEO_FIELDS,
+    refresh: bool = False,
+) -> int:
+    """Merge or replace one slice month's rows in videos.csv."""
+    from scraper.slice import merge_metadata_for_slice
+
+    existing = read_metadata_if_exists(csv_path)
+    merged = merge_metadata_for_slice(
+        existing,
+        new_rows,
+        yyyymm_prefix,
+        refresh=refresh,
+    )
+    _atomic_write_csv(
+        csv_path,
+        lambda writer: writer.writerows(merged),
+        fieldnames=fieldnames,
+    )
+    return len(merged)
+
+
+def remove_summaries_for_video_ids(
+    video_ids: set[str],
+    csv_path: Path = SUMMARIES_CSV,
+) -> None:
+    """Delete summary rows for the given ids; other rows are kept."""
+    if not video_ids:
+        return
+    summaries = read_summaries(csv_path)
+    for video_id in video_ids:
+        summaries.pop(video_id, None)
+    write_summaries(summaries, csv_path, replace_all=True)
 
 
 def read_summaries(csv_path: Path = SUMMARIES_CSV) -> dict[str, str]:
