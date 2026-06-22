@@ -20,3 +20,9 @@ Terms this project uses. Update as decisions land during design work.
 - **Time-bounded pull** — only videos whose `upload_date` falls in the slice month are scraped or extracted.
 - **Slice refresh** — re-running the same `--slice` shows `Refresh? [y/N]`. Yes replaces that month only; other months stay untouched.
 - **Slice append** — running a **new** `--slice` **adds** that month's rows; existing months stay as-is.
+
+## Dashboard
+
+- **Dashboard** — public Streamlit app (`app.py`) reading committed `publish/` artifacts. **Catalog** page for visitors; **Operator** page for weekly refresh checklist.
+- **Publish** — `publish_data.py` writes `publish/videos_with_summaries.csv` and `publish/last_updated.json` from local `data/`. Only `publish/` is committed for the live site; `data/` stays gitignored.
+- **Summary status** — derived per row, not stored in CSV: `complete` (real summary text), `pending` (URL placeholder from failed Copy click), `missing` (no summary).

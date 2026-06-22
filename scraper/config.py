@@ -39,6 +39,10 @@ SUMMARY_FIELDS = ("id", "summary")
 VIDEOS_WITH_SUMMARIES_CSV = DATA_DIR / "videos_with_summaries.csv"
 COMBINED_FIELDS = VIDEO_FIELDS + ("summary",)
 
+PUBLISH_DIR = PROJECT_ROOT / "publish"
+PUBLISH_VIDEOS_CSV = PUBLISH_DIR / "videos_with_summaries.csv"
+PUBLISH_LAST_UPDATED_JSON = PUBLISH_DIR / "last_updated.json"
+
 RUN_LOG_PATH = DATA_DIR / "run.log"
 FAILED_IDS_PATH = DATA_DIR / "failed_ids.txt"
 

@@ -34,8 +34,56 @@ Then scrape the full channel and extract the rest when ready.
 ```bash
 python scrape_metadata.py
 python extract_summaries.py --skip-existing
-python export_combined.py
+python publish_data.py          # dashboard snapshot → publish/
 ```
+
+`export_combined.py` still writes a local join to `data/videos_with_summaries.csv` (gitignored). The public dashboard reads `publish/` only.
+
+## Dashboard
+
+Public Streamlit app: video catalog, trends, and an **Operator** checklist for your weekly refresh.
+
+**Live app:** _(add your Streamlit Cloud URL after deploy)_
+
+Run locally:
+
+```bash
+streamlit run app.py
+```
+
+Open **Catalog** to browse videos; open **Operator** for pending summaries and refresh steps.
+
+Set `GITHUB_REPO_URL` in `dashboard/config.py` before deploying.
+
+### `data/` vs `publish/`
+
+| Path | Git | Purpose |
+|------|-----|---------|
+| `data/videos.csv`, `data/summaries.csv` | ignored | Working copies on your machine |
+| `data/click_positions.json`, `data/run.log`, `data/failed_ids.txt` | ignored | Calibration, logs, local retries |
+| `publish/videos_with_summaries.csv` | **committed** | Public dashboard data |
+| `publish/last_updated.json` | **committed** | “Data as of” timestamp + status counts |
+
+Brave extract runs **locally only**. Streamlit Cloud serves the last committed `publish/` snapshot.
+
+### Weekly publish workflow
+
+1. `python scrape_metadata.py` (optional `--slice YYYY-MM`)
+2. `python extract_summaries.py --skip-existing`
+3. Fix URL-placeholder rows in `data/summaries.csv` (Brave Copy missed — see **Operator** page)
+4. `python publish_data.py`
+5. `git add publish/ && git commit -m "Publish dashboard data" && git push`
+6. Streamlit Cloud redeploys on push; verify “Data as of” on the live app
+
+### Streamlit Cloud deploy
+
+1. Push this repo to GitHub.
+2. Sign in at [share.streamlit.io](https://share.streamlit.io) and **New app**.
+3. Select the repo; set **Main file path** to `app.py` (repo root).
+4. Set **Python version** to 3.12 (match your local venv).
+5. Deploy. Each push to the default branch redeploys automatically.
+
+**Attribution:** Summaries are AI-generated from Patrick Boyle’s public YouTube videos. This project is not affiliated with Patrick Boyle.
 
 ### Study slice (one month at a time)
 
@@ -111,7 +159,9 @@ Check `data/run.log` for timestamps and errors. Failed ids are saved to `data/fa
 | `scrape_metadata.py` | Pull YouTube metadata → `data/videos.csv` |
 | `calibrate.py` | One-time click calibration (once per machine/monitor) |
 | `extract_summaries.py` | Batch extract summaries → `data/summaries.csv` |
-| `export_combined.py` | Join videos + summaries → `data/videos_with_summaries.csv` |
+| `publish_data.py` | Publish dashboard snapshot → `publish/` |
+| `export_combined.py` | Join videos + summaries → `data/videos_with_summaries.csv` (local) |
+| `app.py` | Streamlit dashboard entry point |
 
 **Engine room** (`scraper/` — open only when debugging):
 
@@ -125,7 +175,9 @@ Check `data/run.log` for timestamps and errors. Failed ids are saved to `data/fa
 | `scraper/run_log.py` | Append-only log → `data/run.log` |
 
 ```
-YOU RUN:     scrape_metadata → calibrate → extract_summaries → export_combined
+YOU RUN:     scrape_metadata → calibrate → extract_summaries → publish_data.py → git push
+
+DASHBOARD:   app.py  →  reads publish/  →  Catalog + Operator pages
 
 EXTRACT:     extract_summaries.py  →  loop over videos
                  ├── scraper/extract_plan.py   which videos?
@@ -142,7 +194,9 @@ EXTRACT:     extract_summaries.py  →  loop over videos
 | `scraper/brave_extract.py` | Brave UI automation for one video summary |
 | `scraper/extract_plan.py` | Which videos to extract (filters, skip-existing) |
 | `extract_summaries.py` | Batch extract loop → `summaries.csv` |
-| `export_combined.py` | Join videos + summaries → `videos_with_summaries.csv` |
+| `publish_data.py` | Publish join + `last_updated.json` → `publish/` |
+| `export_combined.py` | Join videos + summaries → `data/videos_with_summaries.csv` |
+| `app.py` | Streamlit dashboard (`dashboard/` package) |
 | `scraper/csv_io.py` | Read/write CSVs (paths and columns defined in `scraper/config.py`) |
 | `scraper/run_log.py` | Append-only extract log → `data/run.log` |
 
