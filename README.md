@@ -109,7 +109,7 @@ Brave extract runs **locally only**. Streamlit Cloud serves the last committed `
 
 1. `python scrape_metadata.py` (optional `--slice YYYY-MM`)
 2. `python extract_summaries.py --skip-existing`
-3. Fix URL-placeholder rows in `data/summaries.csv` (Brave Copy missed — see **Operator** page)
+3. `streamlit run review_app.py` — paste-fix URL-placeholder summaries (Brave Copy missed)
 4. `python publish_data.py`
 5. `git add publish/ && git commit -m "Publish dashboard data" && git push`
 6. Streamlit Cloud redeploys on push; verify “Data as of” on the live app

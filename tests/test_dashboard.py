@@ -184,6 +184,7 @@ def test_refresh_steps_include_publish_and_push() -> None:
     assert "publish_data.py" in steps_text
     assert "git push" in steps_text
     assert "extract_summaries.py --skip-existing" in steps_text
+    assert "review_app.py" in steps_text
 
 
 def test_load_publish_files(tmp_path: Path) -> None:
