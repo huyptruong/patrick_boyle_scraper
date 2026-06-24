@@ -10,7 +10,7 @@ from dashboard.formatting import format_published_at
 REFRESH_STEPS = (
     "Run `python scrape_metadata.py` (optional `--slice YYYY-MM`).",
     "Run `python extract_summaries.py --skip-existing`.",
-    "Fix URL-placeholder rows in local `data/summaries.csv` (Brave Copy missed).",
+    "Run `streamlit run review_app.py` to fix URL-placeholder summaries.",
     "Run `python publish_data.py`.",
     "Run `git add publish/ && git commit && git push`.",
     "Streamlit Cloud redeploys automatically on push.",
